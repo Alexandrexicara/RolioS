@@ -1,22 +1,18 @@
+"""Interface desktop do RollOS, integrada aos serviços locais do protótipo."""
+from __future__ import annotations
+
 from PySide6.QtCore import Qt, QThread, Signal
 from PySide6.QtWidgets import (
-    QDialog,
-    QFrame,
-    QGridLayout,
-    QHBoxLayout,
-    QLabel,
-    QLineEdit,
-    QMainWindow,
-    QMessageBox,
-    QPushButton,
-    QSlider,
-    QSizePolicy,
-    QTextEdit,
-    QVBoxLayout,
-    QWidget,
+    QDialog, QFrame, QGridLayout, QHBoxLayout, QLabel, QLineEdit,
+    QMainWindow, QMessageBox, QPushButton, QSlider, QSizePolicy,
+    QTextEdit, QVBoxLayout, QWidget,
 )
 
 from .ai_client import NvidiaAssistant
+from .apps import AppCatalog
+from .core import RollCore
+from .display import RollDisplay
+from .storage import RollStorage
 from .system_info import collect_system_info
 
 
@@ -38,8 +34,14 @@ class RollShell(QMainWindow):
         self.setWindowTitle("RollOS — protótipo de sistema")
         self.resize(1120, 760)
         self.setMinimumSize(760, 560)
+        self.core = RollCore()
+        self.display = RollDisplay()
+        self.storage = RollStorage()
+        self.apps = AppCatalog()
         self.ai = NvidiaAssistant()
         self._workers: list[AiWorker] = []
+        self._last_mode = ""
+        self.core.log_event("shell_started", {"build": self.core.config.build})
         self._build_ui()
 
     def _build_ui(self) -> None:
@@ -85,13 +87,16 @@ class RollShell(QMainWindow):
         slider_row = QHBoxLayout()
         slider_row.addWidget(QLabel("Extensão simulada da tela"))
         self.extent = QSlider(Qt.Orientation.Horizontal)
-        self.extent.setRange(35, 100)
+        self.extent.setRange(0, 100)
         self.extent.setValue(35)
         self.extent.valueChanged.connect(self._apply_screen_mode)
         slider_row.addWidget(self.extent, 1)
         self.extent_value = QLabel("35%")
         slider_row.addWidget(self.extent_value)
         controls.addLayout(slider_row)
+        self.display_details = QLabel("Resolução virtual: —")
+        self.display_details.setObjectName("muted")
+        controls.addWidget(self.display_details)
         outer.addWidget(panel)
 
         self.cards_host = QWidget()
@@ -101,15 +106,19 @@ class RollShell(QMainWindow):
         outer.addWidget(self.cards_host, 1)
 
         self._add_card("Roll AI", "Assistente integrado com conexão NVIDIA opcional.", self._show_ai)
-        self._add_card("Aplicativos", "Base para aplicativos nativos e web apps.", self._show_apps)
-        self._add_card("Arquivos", "Ponto inicial do gerenciador de arquivos.", self._show_files)
-        self._add_card("Sistema", "Informações do computador que executa o protótipo.", self._show_system)
+        self._add_card("Aplicativos", "Catálogo inicial de aplicativos previstos para o RollOS.", self._show_apps)
+        self._add_card("Armazenamento", "Consulta informativa do espaço livre no computador.", self._show_storage)
+        self._add_card("Sistema", "Informações e versão da camada Roll Core.", self._show_system)
+
         footer = QHBoxLayout()
-        footer.addWidget(QLabel("ROLL CORE • PROTÓTIPO DE SOFTWARE"))
+        footer.addWidget(QLabel("ROLL CORE • SERVIÇOS LOCAIS ATIVOS"))
         footer.addStretch()
-        footer.addWidget(QLabel("Hardware físico ainda não conectado"))
+        self.footer_status = QLabel("Inicializando…")
+        self.footer_status.setObjectName("muted")
+        footer.addWidget(self.footer_status)
         outer.addLayout(footer)
-        self._apply_screen_mode(35)
+        self._apply_screen_mode(self.extent.value())
+        self._refresh_status()
 
     def _add_card(self, title: str, description: str, callback) -> None:
         card = QFrame()
@@ -131,14 +140,27 @@ class RollShell(QMainWindow):
         self.card_widgets.append(card)
 
     def _apply_screen_mode(self, value: int) -> None:
+        state = self.display.state_for(value / 100)
         self.extent_value.setText(f"{value}%")
-        expanded = value >= 68
-        self.mode_label.setText("MODO EXPANDIDO" if expanded else "MODO COMPACTO")
+        self.mode_label.setText("MODO EXPANDIDO" if state.mode == "expanded" else "MODO COMPACTO")
+        self.display_details.setText(
+            f"Resolução virtual: {state.width_px} × {state.height_px} px  •  "
+            f"Grade: {state.columns} coluna(s)"
+        )
         while self.cards.count():
             self.cards.takeAt(0)
-        columns = 2 if expanded else 1
         for index, card in enumerate(self.card_widgets):
-            self.cards.addWidget(card, index // columns, index % columns)
+            self.cards.addWidget(card, index // state.columns, index % state.columns)
+        if state.mode != self._last_mode:
+            self.core.log_event("display_mode_changed", {
+                "mode": state.mode, "expansion": state.expansion,
+                "virtual_width": state.width_px,
+            })
+            self._last_mode = state.mode
+
+    def _refresh_status(self) -> None:
+        ai_status = "NVIDIA pronta" if self.ai.configured else "NVIDIA não configurada"
+        self.footer_status.setText(f"{self.core.config.build}  •  {ai_status}")
 
     def _show_ai(self) -> None:
         dialog = QDialog(self)
@@ -147,15 +169,18 @@ class RollShell(QMainWindow):
         dialog.setStyleSheet(self.styleSheet())
         layout = QVBoxLayout(dialog)
         status = QLabel(
-            "NVIDIA configurada" if self.ai.configured
-            else "NVIDIA não configurada — edite o arquivo .env"
+            f"NVIDIA configurada · modelo {self.ai.model}" if self.ai.configured
+            else "NVIDIA não configurada — preencha NVIDIA_API_KEY no arquivo .env"
         )
         status.setObjectName("muted")
         output = QTextEdit()
         output.setReadOnly(True)
-        output.setPlainText("Olá! Sou o Roll AI. Faça uma pergunta para testar a integração.")
+        output.setPlainText(
+            "Olá! Sou o Roll AI. Faça uma pergunta para testar a conexão. "
+            "Sem uma chave configurada, o sistema informa que a conexão está indisponível."
+        )
         prompt = QLineEdit()
-        prompt.setPlaceholderText("Digite sua pergunta...")
+        prompt.setPlaceholderText("Digite sua pergunta…")
         send = QPushButton("Enviar")
         send.setObjectName("primary")
 
@@ -164,14 +189,17 @@ class RollShell(QMainWindow):
             if not question:
                 return
             prompt.clear()
-            output.append(f"\nVocê: {question}\nRoll AI: processando...")
+            output.append(f"\nVocê: {question}\nRoll AI: processando…")
             send.setEnabled(False)
             worker = AiWorker(self.ai, question)
             self._workers.append(worker)
+
             def complete(answer: str) -> None:
                 output.append(answer)
                 send.setEnabled(True)
-                self._workers.remove(worker)
+                if worker in self._workers:
+                    self._workers.remove(worker)
+
             worker.finished_text.connect(complete)
             worker.start()
 
@@ -184,17 +212,60 @@ class RollShell(QMainWindow):
         dialog.exec()
 
     def _show_apps(self) -> None:
-        QMessageBox.information(
-            self, "Aplicativos",
-            "O catálogo e o instalador de aplicativos serão implementados após definir o formato de pacotes."
-        )
+        dialog = QDialog(self)
+        dialog.setWindowTitle("Catálogo RollOS — demonstração")
+        dialog.resize(520, 420)
+        dialog.setStyleSheet(self.styleSheet())
+        layout = QVBoxLayout(dialog)
+        intro = QLabel("Catálogo conceitual. Nenhum aplicativo é instalado nesta versão.")
+        intro.setObjectName("muted")
+        layout.addWidget(intro)
+        for app in self.apps.list_apps():
+            row = QFrame()
+            row.setObjectName("panel")
+            row_layout = QVBoxLayout(row)
+            name = QLabel(f"{app.name}  ·  {app.category}")
+            name.setStyleSheet("font-weight: 700;")
+            description = QLabel(app.description)
+            description.setObjectName("muted")
+            description.setWordWrap(True)
+            state = QLabel(app.status.upper())
+            state.setStyleSheet("color: #7ce7d5; font-size: 10px;")
+            row_layout.addWidget(name)
+            row_layout.addWidget(description)
+            row_layout.addWidget(state)
+            layout.addWidget(row)
+        close = QPushButton("Fechar")
+        close.clicked.connect(dialog.accept)
+        layout.addWidget(close)
+        dialog.exec()
+        self.core.log_event("app_catalog_opened", {"items": len(self.apps.list_apps())})
 
-    def _show_files(self) -> None:
-        QMessageBox.information(self, "Arquivos", "O gerenciador de arquivos será conectado na próxima etapa.")
+    def _show_storage(self) -> None:
+        try:
+            snapshot = self.storage.snapshot()
+            total = snapshot.total_bytes / (1024 ** 3)
+            free = snapshot.free_gb
+            used = snapshot.used_percent
+            message = (
+                f"Local consultado: {snapshot.path}\n\n"
+                f"Capacidade: {total:.1f} GB\n"
+                f"Em uso: {used:.1f}%\n"
+                f"Livre: {free:.1f} GB\n\n"
+                "Consulta somente informativa. Nenhum arquivo foi alterado."
+            )
+            self.core.log_event("storage_snapshot_read", {"free_gb": round(free, 2)})
+            QMessageBox.information(self, "Roll Storage", message)
+        except OSError as exc:
+            QMessageBox.warning(self, "Roll Storage", f"Não foi possível consultar o armazenamento: {exc}")
 
     def _show_system(self) -> None:
         info = collect_system_info()
+        info["RollOS build"] = self.core.config.build
+        info["Diretório de dados"] = str(self.core.data_dir)
+        info["NVIDIA NIM"] = "Configurada" if self.ai.configured else "Não configurada"
+        self.core.log_event("system_info_opened")
         QMessageBox.information(
-            self, "Informações do protótipo",
+            self, "Informações do RollOS",
             "\n".join(f"{key}: {value}" for key, value in info.items())
         )
