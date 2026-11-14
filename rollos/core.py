@@ -49,4 +49,4 @@ class RollCore:
             raise ValueError("O nome do evento não pode ficar vazio.")
         event = {"time": datetime.now(timezone.utc).isoformat(), "name": name, "details": details or {}}
         with self.events_path.open("a", encoding="utf-8") as stream:
-            stream.write(json.dumps(event, ensure_ascii=False) + "\\n")
+            stream.write(json.dumps(event, ensure_ascii=False) + chr(10))
