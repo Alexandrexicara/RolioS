@@ -20,7 +20,7 @@
 - [ ] Testar erros de rede, timeout, resposta inválida e chave NVIDIA ausente.
 - [ ] Criar backend autenticado e com limites de uso para a IA na prévia web.
 
-## Marco 0.4 — base móvel
+## Marco 0.35 — Roll Cloud inicial\n- [x] Cliente Neon Management API para listar organizações e criar projeto PostgreSQL na conta escolhida.\n- [x] Chave pessoal solicitada em tempo de execução, sem persistência no RollOS.\n- [x] Confirmação explícita antes de criar projeto (ação sujeita aos limites/plano Neon).\n- [ ] Executar testes automatizados do cliente Neon em CI Windows/Linux.\n- [ ] Obter aprovação/credenciais do programa de parceria Neon para OAuth oficial.\n- [ ] Implementar callback OAuth com state/PKCE, refresh seguro e revogação.\n- [ ] Conectar o backend RollOS ao banco usando segredo guardado no servidor, não no cliente móvel.\n- [ ] Criar bucket privado de Object Storage e uploads/downloads com URLs assinadas.\n- [ ] Implementar quotas por usuário, limites de tamanho, verificação de tipo, antivírus e exclusão/exportação de dados.\n\n## Marco 0.4 — base móvel
 - [ ] Escolher um dispositivo ARM real de referência.
 - [ ] Confirmar SoC, GPU, modem, painel, controlador de toque, sensores e documentação do fabricante.
 - [ ] Selecionar base Linux móvel compatível e política de licenças.
