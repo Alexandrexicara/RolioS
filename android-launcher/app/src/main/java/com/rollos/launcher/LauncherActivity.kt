@@ -83,7 +83,7 @@ class LauncherActivity : Activity() {
             addDataScheme("package")
         }
         if (Build.VERSION.SDK_INT >= 33) registerReceiver(packageChanges, filter, Context.RECEIVER_NOT_EXPORTED)
-        else @Suppress("DEPRECATION") registerReceiver(packageChanges, filter)
+        else {\n            @Suppress("DEPRECATION")\n            registerReceiver(packageChanges, filter)\n        }
     }
 
     override fun onPause() {
