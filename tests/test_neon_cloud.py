@@ -40,7 +40,7 @@ class NeonProvisionerTests(unittest.TestCase):
         self.assertEqual(project.connection_uri, "postgresql://user:secret@host/db")
         payload = session.request.call_args.kwargs["json"]
         self.assertEqual(payload["project"]["branch"]["database_name"], "rollos")
-        self.assertEqual(payload["org_id"], "org-123")
+        self.assertEqual(payload["project"]["org_id"], "org-123")
 
     def test_rejects_unsupported_region_before_request(self):
         session = Mock()
