@@ -26,6 +26,7 @@ class NeonProject:
     name: str
     region_id: str
     connection_uri: str | None
+    branch_id: str | None
 
 
 class NeonProvisioner:
@@ -142,12 +143,32 @@ class NeonProvisioner:
                 connection_uri = uri_data.get("uri")
             except NeonProvisioningError:
                 connection_uri = None
+        branch = data.get("branch") or project.get("branch") or {}
+        branch_id = branch.get("id") if isinstance(branch, dict) else None
         return NeonProject(
             project_id=str(project_id),
             name=str(project.get("name") or name.strip()),
             region_id=str(project.get("region_id") or region_id),
             connection_uri=connection_uri,
+            branch_id=str(branch_id) if branch_id else None,
         )
+
+    def create_private_bucket(
+        self, project_id: str, branch_id: str, name: str = "rollos-user-files"
+    ) -> str:
+        if not project_id or not branch_id:
+            raise ValueError("O projeto e a branch Neon são necessários para criar o bucket.")
+        if not name or len(name) > 255:
+            raise ValueError("O nome do bucket deve ter entre 1 e 255 caracteres.")
+        data = self._request(
+            "POST",
+            f"projects/{project_id}/branches/{branch_id}/buckets",
+            json={"name": name, "access_level": "private"},
+        )
+        bucket = data.get("bucket", data)
+        if not isinstance(bucket, dict):
+            raise NeonProvisioningError("O Neon não confirmou a criação do bucket.")
+        return str(bucket.get("name") or name)
 
 
 def initialize_rollos_schema(connection_uri: str) -> None:
