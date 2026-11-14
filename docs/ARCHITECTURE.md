@@ -1,14 +1,14 @@
 # Arquitetura inicial do RollOS
 
-## Camadas planejadas
+## Camadas implementadas no protótipo
 
-- **Roll Core:** serviços de sessão, configuração, logs e ciclo de vida.
-- **Roll Shell:** interface adaptável ao espaço disponível da tela.
-- **Roll Display:** abstração para dimensões, orientação e estados do painel.
-- **Roll AI:** roteador híbrido entre inferência local e NVIDIA NIM.
-- **Roll Storage:** políticas de dados, cache e armazenamento persistente.
-- **Roll Store:** catálogo, instalação e atualização de aplicativos.
-- **Roll Game:** serviços de entrada, controles e perfil de desempenho.
+- **Roll Core:** configuração local em `~/.rollos/config.json` e log de eventos em `events.jsonl`.
+- **Roll Shell:** interface desktop PySide6, com cartões e reorganização de colunas.
+- **Roll Display:** cálculo de dimensões virtuais e estados compacto/expandido, sem acionar hardware.
+- **Roll AI:** cliente opcional NVIDIA NIM no protótipo desktop. A chave fica no arquivo `.env` local.
+- **Roll Storage:** consulta informativa de capacidade e espaço livre, sem apagar ou modificar arquivos.
+- **Roll Store:** catálogo estático de aplicativos planejados; instalação ainda não habilitada.
+- **Roll Game:** camada futura para entrada, controles e perfis de desempenho.
 
 ## Estratégia técnica
 
@@ -16,4 +16,4 @@ O primeiro marco é um protótipo desktop em Python/PySide6. A etapa móvel deve
 
 ## Segurança
 
-Chaves de API ficam em `.env`, fora do controle de versão. Não incluir tokens, senhas ou chaves nos commits.
+Chaves de API ficam em `.env`, fora do controle de versão. Não incluir tokens, senhas ou chaves nos commits. O catálogo de aplicativos desta fase não executa downloads nem comandos de instalação.
