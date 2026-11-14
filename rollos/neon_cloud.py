@@ -133,9 +133,85 @@ class NeonProvisioner:
                 connection_uri = first.get("connection_uri") or first.get("uri")
             elif isinstance(first, str):
                 connection_uri = first
+        if not connection_uri:
+            try:
+                uri_data = self._request(
+                    "GET",
+                    f"projects/{project_id}/connection_uri?database_name=rollos&pooled=true",
+                )
+                connection_uri = uri_data.get("uri")
+            except NeonProvisioningError:
+                connection_uri = None
         return NeonProject(
             project_id=str(project_id),
             name=str(project.get("name") or name.strip()),
             region_id=str(project.get("region_id") or region_id),
             connection_uri=connection_uri,
         )
+
+
+def initialize_rollos_schema(connection_uri: str) -> None:
+    """Cria o esquema mínimo de metadados do Roll Cloud no projeto recém-criado."""
+    if not connection_uri or not connection_uri.startswith(("postgres://", "postgresql://")):
+        raise ValueError("O Neon não forneceu uma URI PostgreSQL válida.")
+    try:
+        import psycopg
+    except ImportError as exc:
+        raise NeonProvisioningError(
+            "O driver PostgreSQL não está instalado. Instale as dependências do RollOS."
+        ) from exc
+    statements = (
+        """
+        CREATE TABLE IF NOT EXISTS rollos_files (
+            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+            owner_id TEXT NOT NULL,
+            object_key TEXT NOT NULL,
+            file_name TEXT NOT NULL,
+            content_type TEXT,
+            size_bytes BIGINT NOT NULL DEFAULT 0 CHECK (size_bytes >= 0),
+            created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+            metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
+            UNIQUE (owner_id, object_key)
+        )
+        """,
+        """
+        CREATE INDEX IF NOT EXISTS rollos_files_owner_created_idx
+        ON rollos_files (owner_id, created_at DESC)
+        """,
+        """
+        CREATE TABLE IF NOT EXISTS rollos_storage_usage (
+            owner_id TEXT PRIMARY KEY,
+            used_bytes BIGINT NOT NULL DEFAULT 0 CHECK (used_bytes >= 0),
+            updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+        )
+        """,
+        """
+        CREATE TABLE IF NOT EXISTS rollos_preferences (
+            owner_id TEXT PRIMARY KEY,
+            preferences JSONB NOT NULL DEFAULT '{}'::jsonb,
+            updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+        )
+        """,
+    )
+    try:
+        with psycopg.connect(connection_uri, connect_timeout=15) as connection:
+            with connection.cursor() as cursor:
+                for statement in statements:
+                    cursor.execute(statement)
+    except Exception as exc:
+        raise NeonProvisioningError(
+            "O projeto Neon foi criado, mas não foi possível preparar as tabelas iniciais. "
+            "Confira a conexão e tente novamente."
+        ) from exc
+
+
+def save_database_credential(connection_uri: str) -> None:
+    """Guarda a URI no cofre de credenciais do sistema operacional."""
+    try:
+        import keyring
+        keyring.set_password("RollOS", "neon:database_url", connection_uri)
+    except Exception as exc:
+        raise NeonProvisioningError(
+            "O banco foi configurado, mas o cofre de credenciais do sistema não está disponível. "
+            "Não salve a URI em arquivo de texto; configure um cofre seguro antes de usar."
+        ) from exc
