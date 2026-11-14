@@ -76,7 +76,7 @@ class NeonProvisioner:
         return data
 
     def list_organizations(self) -> list[dict[str, str]]:
-        data = self._request("GET", "organizations?limit=100")
+        data = self._request("GET", "users/me/organizations")
         rows = data.get("organizations", [])
         if not isinstance(rows, list):
             raise NeonProvisioningError("Não foi possível interpretar as organizações da conta Neon.")
@@ -107,6 +107,7 @@ class NeonProvisioner:
         data = self._request("POST", "projects", json={
             "project": {
                 "name": name.strip(),
+                "org_id": org_id,
                 "region_id": region_id,
                 "pg_version": 17,
                 "branch": {
@@ -114,7 +115,6 @@ class NeonProvisioner:
                     "database_name": "rollos",
                 },
             },
-            "org_id": org_id,
         })
         project = data.get("project", data)
         if not isinstance(project, dict):
