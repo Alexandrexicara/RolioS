@@ -9,11 +9,14 @@
 - [x] Roll Storage: consulta informativa de espaço em disco, sem apagar dados.
 - [x] Testes unitários iniciais dos serviços.
 
-## Marco 0.3 — integração
-- [ ] Integrar os serviços ao shell desktop.
-- [ ] Testes em Windows e Linux.
-- [ ] Backend seguro para IA; chave NVIDIA nunca deve ir para JavaScript do navegador.
-- [ ] CI para executar os testes em cada push.
+## Marco 0.3 — integração desktop
+- [x] Integrar Roll Core, Roll Display e Roll Storage ao shell desktop.
+- [x] Registrar inicialização e mudanças de modo no log local.
+- [x] Adicionar catálogo informativo de aplicativos (sem instalação nesta fase).
+- [x] Exibir status da integração NVIDIA sem expor credenciais.
+- [ ] Executar testes automatizados em Windows e Linux.
+- [ ] Validar interface em diferentes resoluções e escalas de tela.
+- [ ] Backend seguro para IA na interface web; chave NVIDIA nunca deve ir para JavaScript do navegador.
 
 ## Marco 0.4 — plataforma móvel
 - [ ] Definir SoC e dispositivo ARM de referência.
@@ -22,4 +25,4 @@
 - [ ] Só então iniciar drivers e integração de sensores/motores.
 
 ## Segurança e escopo
-O protótipo atual roda em espaço de usuário. Não altera partições, não controla motores e não instala kernel. A leitura de armazenamento é somente informativa. A conexão de IA em nuvem deve ocorrer no backend, protegendo credenciais.
+O protótipo atual roda em espaço de usuário. Não altera partições, não controla motores e não instala kernel. A leitura de armazenamento é somente informativa. O catálogo ainda não instala pacotes. A conexão de IA em nuvem deve ocorrer no backend, protegendo credenciais.
