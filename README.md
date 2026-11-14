@@ -18,3 +18,32 @@ Chaves de API devem ficar em variáveis locais/servidor e nunca em JavaScript pu
 - [Preview no Netlify](https://rollios.netlify.app/)
 - [Painel Netlify](https://app.netlify.com/projects/rollios)
 - [Arquitetura](docs/ARCHITECTURE.md)
+
+
+## Protótipo desktop (em desenvolvimento)
+
+A branch `feature/rollos-integrated-preview` também inclui uma versão desktop em Python/PySide6:
+- Roll Core: configurações e log local de eventos.
+- Roll Display: simulação da expansão e reorganização do layout.
+- Roll Storage: leitura informativa do armazenamento, sem apagar arquivos.
+- Roll AI: cliente opcional NVIDIA NIM para o protótipo desktop.
+- Roll Store: catálogo conceitual, sem instalação de aplicativos nesta fase.
+
+Para executar no Windows, consulte as instruções de instalação abaixo:
+
+```powershell
+py -3 -m venv .venv
+.\\.venv\\Scripts\\Activate.ps1
+python -m pip install --upgrade pip
+pip install -r requirements.txt
+Copy-Item .env.example .env
+python main.py
+```
+
+Para executar os testes:
+
+```powershell
+python -m unittest discover -s tests -v
+```
+
+O protótipo desktop ainda não é um sistema operacional móvel instalável. O kernel, drivers e controle físico da tela dependem da escolha e documentação do hardware.
