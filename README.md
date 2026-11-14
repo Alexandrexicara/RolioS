@@ -11,10 +11,10 @@ A interface web de demonstração está publicada em **https://rollios.netlify.a
 - A branch `main` contém a prévia web estática publicada na Netlify.
 - A branch `feature/rollos-integrated-preview` reúne a prévia web e o protótipo desktop em Python/PySide6.
 - O PR [#2 — integração do protótipo desktop](https://github.com/Alexandrexicara/RolioS/pull/2) está em validação.
-- O protótipo inclui Roll Core, Roll Display simulado, Roll Storage somente leitura, cliente NVIDIA NIM opcional e catálogo conceitual.
+- O protótipo inclui Roll Core, Roll Display simulado, Roll Storage somente leitura, cliente NVIDIA NIM opcional, catálogo conceitual e um primeiro fluxo Roll Cloud para criar um projeto na conta Neon do próprio usuário.
 - Os testes automatizados ainda precisam passar em Windows e Linux.
 
-## O que ainda não funciona como sistema operacional
+## Roll Cloud — estágio experimental\n\nO cartão Roll Cloud permite informar uma chave pessoal da Neon em tempo de execução, listar as organizações autorizadas e criar um projeto PostgreSQL na organização escolhida. A chave não é gravada pelo RollOS. A criação consome os limites/plano da conta Neon do usuário. Este fluxo ainda não é OAuth integrado: o OAuth oficial da Neon é restrito a parceiros comerciais ativos. A conexão de produção do aplicativo e o armazenamento de arquivos em bucket ainda não estão concluídos. Não use uma chave administrativa em dispositivo compartilhado.\n\n## O que ainda não funciona como sistema operacional
 
 Esta versão não é instalável em celular. Ainda não possui kernel próprio, imagem de instalação, boot móvel, drivers, integração com painel flexível, modem, GPU, sensores ou motores. O catálogo não instala aplicativos. A prévia web do Roll AI é demonstrativa; a chave NVIDIA não deve ser publicada no navegador.
 
