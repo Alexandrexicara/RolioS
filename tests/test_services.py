@@ -2,6 +2,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from rollos.apps import AppCatalog
 from rollos.core import RollCore
 from rollos.display import RollDisplay
 from rollos.storage import RollStorage
@@ -32,6 +33,14 @@ class RollServiceTests(unittest.TestCase):
             snapshot = RollStorage().snapshot(folder)
             self.assertGreater(snapshot.total_bytes, 0)
             self.assertGreaterEqual(snapshot.free_bytes, 0)
+
+    def test_app_catalog_has_unique_ids_and_known_roll_ai(self):
+        catalog = AppCatalog()
+        apps = catalog.list_apps()
+        ids = [app.app_id for app in apps]
+        self.assertEqual(len(ids), len(set(ids)))
+        self.assertEqual(catalog.get("roll-ai").status, "protótipo")
+        self.assertIsNone(catalog.get("not-installed"))
 
 
 if __name__ == "__main__":
