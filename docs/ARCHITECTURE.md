@@ -6,11 +6,11 @@
 - **Roll Shell:** interface desktop PySide6, com cartões e reorganização de colunas.
 - **Roll Display:** cálculo de dimensões virtuais e estados compacto/expandido; não aciona hardware.
 - **Roll AI:** cliente opcional NVIDIA NIM no protótipo desktop. A chave fica em `.env` local.
-- **Roll Storage:** consulta informativa de capacidade e espaço livre, sem apagar ou modificar arquivos.
+- **Roll Storage:** consulta informativa de capacidade e espaço livre, sem apagar ou modificar arquivos.\n- **Roll Cloud (experimental):** cliente da Neon Management API que lista organizações e cria um projeto PostgreSQL na conta Neon autorizada pelo usuário. A chave pessoal é transitória e não é salva.
 - **Roll Store:** catálogo estático de aplicativos planejados; instalação ainda não habilitada.
 - **Roll Game:** camada futura para entrada, controles e perfis de desempenho.
 
-## Arquitetura móvel pretendida
+## Roll Cloud: fluxo e limites atuais\n\n1. O usuário cria uma chave pessoal no Console Neon e a informa no fluxo experimental do Roll Cloud.\n2. O RollOS usa a chave apenas em memória para consultar as organizações e criar um projeto na organização escolhida.\n3. O projeto nasce com branch `production` e banco `rollos`.\n4. O RollOS registra localmente apenas o evento e o ID do projeto, nunca a chave.\n5. A URI de conexão não é persistida nem distribuída nesta etapa; a conexão do app deve passar por backend protegido.\n6. Vídeos e fotos ainda não são enviados: o bucket de Object Storage e os uploads com URLs assinadas serão uma etapa separada.\n\n**OAuth:** a integração oficial OAuth da Neon para aplicativos de terceiros exige parceria comercial ativa. Até haver aprovação e credenciais OAuth próprias do RollOS, não apresentar o fluxo de chave pessoal como login OAuth nem como experiência final de produção.\n\n## Arquitetura móvel pretendida
 
 1. **Boot e recuperação:** bootloader suportado pelo aparelho, imagem assinada, partições de sistema e recuperação/rollback.
 2. **Kernel e drivers:** kernel Linux compatível com o SoC e drivers para GPU, painel, toque, áudio, modem, sensores e energia.
