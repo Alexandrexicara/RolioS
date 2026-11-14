@@ -5,7 +5,7 @@ from PySide6.QtCore import Qt, QThread, Signal
 from PySide6.QtWidgets import (
     QDialog, QFrame, QGridLayout, QHBoxLayout, QLabel, QLineEdit,
     QMainWindow, QMessageBox, QPushButton, QSlider, QSizePolicy,
-    QTextEdit, QVBoxLayout, QWidget,
+    QTextEdit, QVBoxLayout, QWidget, QInputDialog,
 )
 
 from .ai_client import NvidiaAssistant
@@ -14,6 +14,7 @@ from .core import RollCore
 from .display import RollDisplay
 from .storage import RollStorage
 from .system_info import collect_system_info
+from .neon_cloud import NeonProvisioner, NeonProvisioningError
 
 
 class AiWorker(QThread):
@@ -108,6 +109,7 @@ class RollShell(QMainWindow):
         self._add_card("Roll AI", "Assistente integrado com conexão NVIDIA opcional.", self._show_ai)
         self._add_card("Aplicativos", "Catálogo inicial de aplicativos previstos para o RollOS.", self._show_apps)
         self._add_card("Armazenamento", "Consulta informativa do espaço livre no computador.", self._show_storage)
+        self._add_card("Roll Cloud", "Crie um projeto de banco de dados na sua própria conta Neon.", self._show_roll_cloud)
         self._add_card("Sistema", "Informações e versão da camada Roll Core.", self._show_system)
 
         footer = QHBoxLayout()
@@ -240,6 +242,82 @@ class RollShell(QMainWindow):
         layout.addWidget(close)
         dialog.exec()
         self.core.log_event("app_catalog_opened", {"items": len(self.apps.list_apps())})
+
+
+    def _show_roll_cloud(self) -> None:
+        QMessageBox.information(
+            self, "Conectar ao Neon",
+            "Esta etapa experimental cria um projeto na sua própria conta Neon. "
+            "Você precisa gerar uma chave de API pessoal no Neon (Configurações da conta → API keys). "
+            "A chave será usada somente nesta execução e não será gravada pelo RollOS. "
+            "A integração OAuth automática depende de aprovação comercial do Neon."
+        )
+        api_key, accepted = QInputDialog.getText(
+            self, "Autorização Neon", "Cole sua chave de API pessoal do Neon:",
+            QLineEdit.EchoMode.Password,
+        )
+        if not accepted or not api_key.strip():
+            return
+        try:
+            provisioner = NeonProvisioner(api_key)
+            organizations = provisioner.list_organizations()
+        except (NeonProvisioningError, ValueError) as exc:
+            QMessageBox.warning(self, "Roll Cloud", str(exc))
+            return
+        labels = [f"{item['name']} — {item['id']}" for item in organizations]
+        selected, accepted = QInputDialog.getItem(
+            self, "Conta Neon", "Escolha a organização que será proprietária do projeto:",
+            labels, 0, False,
+        )
+        if not accepted or not selected:
+            return
+        organization = organizations[labels.index(selected)]
+        project_name, accepted = QInputDialog.getText(
+            self, "Novo banco RollOS", "Nome do projeto:", text="rollos-cloud"
+        )
+        if not accepted or not project_name.strip():
+            return
+        regions = [
+            "aws-us-east-1", "aws-us-east-2",
+            "aws-eu-central-1", "aws-ap-southeast-1",
+        ]
+        region, accepted = QInputDialog.getItem(
+            self, "Região Neon", "Escolha a região do banco:",
+            regions, 0, False,
+        )
+        if not accepted:
+            return
+        confirm = QMessageBox.question(
+            self, "Confirmar criação",
+            f"Criar o projeto '{project_name.strip()}' na organização "
+            f"'{organization['name']}' ({region})? Esta ação pode consumir os limites "
+            "do plano Neon da sua conta.",
+        )
+        if confirm != QMessageBox.StandardButton.Yes:
+            return
+        try:
+            project = provisioner.create_project(
+                organization["id"], project_name.strip(), region
+            )
+        except (NeonProvisioningError, ValueError) as exc:
+            QMessageBox.warning(self, "Roll Cloud", str(exc))
+            return
+        self.core.log_event("neon_project_created", {
+            "project_id": project.project_id, "region": project.region_id,
+        })
+        details = (
+            f"Projeto criado na sua conta Neon.\\n\\n"
+            f"Nome: {project.name}\\nID: {project.project_id}\\n"
+            f"Região: {project.region_id}\\n\\n"
+            "O projeto e o banco inicial foram provisionados. A conexão automática "
+            "do RollOS e o bucket de arquivos ainda serão concluídos na próxima etapa."
+        )
+        if not project.connection_uri:
+            details += (
+                "\\n\\nO Neon não incluiu a URI de conexão nesta resposta. "
+                "Consulte a página do projeto no Neon para obtê-la."
+            )
+        QMessageBox.information(self, "Roll Cloud", details)
 
     def _show_storage(self) -> None:
         try:
