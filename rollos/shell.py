@@ -318,9 +318,19 @@ class RollShell(QMainWindow):
                 initialize_rollos_schema(project.connection_uri)
                 save_database_credential(project.connection_uri)
                 details += (
-                    "\\nBanco conectado e tabelas iniciais do RollOS criadas. "
-                    "A conexão foi guardada no cofre de credenciais do sistema."
+                    "\\nBanco conectado, tabelas iniciais criadas e conexão guardada "
+                    "no cofre de credenciais do sistema."
                 )
+                if project.branch_id:
+                    bucket_name = provisioner.create_private_bucket(
+                        project.project_id, project.branch_id
+                    )
+                    details += f"\\nBucket privado de arquivos criado: {bucket_name}."
+                else:
+                    details += (
+                        "\\nA branch não foi retornada pela Neon; o bucket privado "
+                        "precisará ser criado depois."
+                    )
             except (NeonProvisioningError, ValueError) as exc:
                 details += f"\\n\\nProjeto criado, mas a configuração automática não terminou: {exc}"
         else:
