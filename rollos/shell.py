@@ -14,7 +14,10 @@ from .core import RollCore
 from .display import RollDisplay
 from .storage import RollStorage
 from .system_info import collect_system_info
-from .neon_cloud import NeonProvisioner, NeonProvisioningError
+from .neon_cloud import (
+    NeonProvisioner, NeonProvisioningError,
+    initialize_rollos_schema, save_database_credential,
+)
 
 
 class AiWorker(QThread):
@@ -308,15 +311,27 @@ class RollShell(QMainWindow):
         details = (
             f"Projeto criado na sua conta Neon.\\n\\n"
             f"Nome: {project.name}\\nID: {project.project_id}\\n"
-            f"Região: {project.region_id}\\n\\n"
-            "O projeto e o banco inicial foram provisionados. A conexão automática "
-            "do RollOS e o bucket de arquivos ainda serão concluídos na próxima etapa."
+            f"Região: {project.region_id}\\n"
         )
-        if not project.connection_uri:
+        if project.connection_uri:
+            try:
+                initialize_rollos_schema(project.connection_uri)
+                save_database_credential(project.connection_uri)
+                details += (
+                    "\\nBanco conectado e tabelas iniciais do RollOS criadas. "
+                    "A conexão foi guardada no cofre de credenciais do sistema."
+                )
+            except (NeonProvisioningError, ValueError) as exc:
+                details += f"\\n\\nProjeto criado, mas a configuração automática não terminou: {exc}"
+        else:
             details += (
-                "\\n\\nO Neon não incluiu a URI de conexão nesta resposta. "
-                "Consulte a página do projeto no Neon para obtê-la."
+                "\\n\\nProjeto criado, mas a Neon não forneceu uma URI de conexão. "
+                "A conexão e as tabelas precisam ser configuradas depois no Console Neon."
             )
+        details += (
+            "\\n\\nO armazenamento de vídeos e fotos em bucket ainda será ativado "
+            "na próxima etapa do Roll Cloud."
+        )
         QMessageBox.information(self, "Roll Cloud", details)
 
     def _show_storage(self) -> None:
