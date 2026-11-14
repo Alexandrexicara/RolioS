@@ -32,15 +32,28 @@ class NeonProvisionerTests(unittest.TestCase):
         session = Mock()
         session.request.return_value = FakeResponse({
             "project": {"id": "quiet-tree-123", "name": "rollos-user", "region_id": "aws-us-east-1"},
+            "branch": {"id": "br-main-123"},
             "connection_uris": [{"connection_uri": "postgresql://user:secret@host/db"}],
         }, status=201)
         client = NeonProvisioner("secret-test-key", session=session)
         project = client.create_project("org-123", "rollos-user")
         self.assertEqual(project.project_id, "quiet-tree-123")
         self.assertEqual(project.connection_uri, "postgresql://user:secret@host/db")
+        self.assertEqual(project.branch_id, "br-main-123")
         payload = session.request.call_args.kwargs["json"]
         self.assertEqual(payload["project"]["branch"]["database_name"], "rollos")
         self.assertEqual(payload["project"]["org_id"], "org-123")
+
+    def test_creates_private_storage_bucket(self):
+        session = Mock()
+        session.request.return_value = FakeResponse({"bucket": {"name": "rollos-user-files"}}, status=201)
+        client = NeonProvisioner("secret-test-key", session=session)
+        result = client.create_private_bucket("project-123", "br-main-123")
+        self.assertEqual(result, "rollos-user-files")
+        self.assertEqual(
+            session.request.call_args.kwargs["json"],
+            {"name": "rollos-user-files", "access_level": "private"},
+        )
 
     def test_rejects_unsupported_region_before_request(self):
         session = Mock()
