@@ -11,7 +11,7 @@ class NvidiaAssistant:
 
     def __init__(self) -> None:
         self.api_key = os.getenv("NVIDIA_API_KEY", "").strip()
-        self.model = os.getenv("NVIDIA_MODEL", "meta/llama-3.1-8b-instruct").strip()
+        self.model = os.getenv("NVIDIA_MODEL", "nvidia/nemotron-3.5-bolt-e4b").strip()
         self.base_url = os.getenv(
             "NVIDIA_BASE_URL", "https://integrate.api.nvidia.com/v1"
         ).rstrip("/")
@@ -36,7 +36,7 @@ class NvidiaAssistant:
                         {
                             "role": "system",
                             "content": (
-                                "Você é o Roll AI, assistente do RollOS. Responda em "
+                                "Você é o Jarvis, assistente do RollOS. Responda em "
                                 "português brasileiro. Não afirme controlar hardware "
                                 "que ainda não esteja conectado."
                             ),
